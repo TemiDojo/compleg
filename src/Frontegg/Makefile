@@ -14,12 +14,12 @@ lex.yy.c: frontend.l
 	$(LEX) $^
 
 y.tab.c: frontend.y
-	$(YACC) -d $^
+	$(YACC) -Wconflicts-sr -Wcounterexamples -d $^
 
-ast.o: ./ast/ast.c
+ast.o: ../ast/ast.c
 	$(GCC) -c $^
 
 clean:
-	rm -f prac *.yy.c y.tab.* ast.o
+	rm -f frontend *.yy.c y.tab.* ast.o
 
 
