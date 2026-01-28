@@ -8,6 +8,8 @@ int yyerror(const char *s);
 %}
 %%
 "int"       { return TYPE;}
+"read"      { yylval.sIndex = strdup(yytext); return READ; }
+"print"     { yylval.sIndex = strdup(yytext); return PRINT; }
 "void"      { return TYPE; }
 "extern"    { return EXTERN; }
 "if"        { return IF; }

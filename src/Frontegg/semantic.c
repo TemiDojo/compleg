@@ -30,9 +30,10 @@ void traverseRoot(astNode *node, vector<char *> *symbol_table) {
         case ast_func: {
                             std::vector<char *> *sym_table = new vector<char *>();                            
                             symbol_stack.push_back(sym_table);
-
-                            traverseRoot(node->func.param, sym_table);
-                            traverseRoot(node->func.body, NULL);
+                            if (node->func.param != NULL) {
+                                traverseRoot(node->func.param, sym_table);
+                            }
+                            traverseRoot(node->func.body, sym_table);
                             symbol_stack.pop_back();  
                             break;
                         }

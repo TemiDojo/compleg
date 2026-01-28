@@ -16,7 +16,7 @@ astNode *root = NULL;
     astNode *nPtr;
     vector<astNode*> *stmtList;
 };
-%token <sIndex> VARIABLE FNAME 
+%token <sIndex> VARIABLE FNAME READ PRINT
 %token <iValue> NUMBER
 %type <nPtr> expression statement functiondef block decl extern program
 %type <stmtList> statement_list decl_list
@@ -35,10 +35,10 @@ program: extern extern functiondef                  {
         | functiondef                               {
                                                         root = createProg(NULL, NULL, $1); 
                                                     }
-extern: EXTERN TYPE VARIABLE '(' ')' ';'            {
+extern: EXTERN TYPE READ '(' ')' ';'                {
                                                         $$ = createExtern($3);
                                                     }
-    | EXTERN TYPE VARIABLE '(' TYPE ')' ';'           {
+    | EXTERN TYPE PRINT '(' TYPE ')' ';'           {
                                                         $$ = createExtern($3);
                                                     }
     ;
