@@ -7,7 +7,7 @@ FLAGS=-o
 
 all: frontend
 
-frontend: lex.yy.c y.tab.c ast.o
+frontend: lex.yy.c y.tab.c semantic.c ast.o
 	$(GCC) $^ $(FLAGS) $@ 
 
 lex.yy.c: frontend.l
@@ -20,6 +20,6 @@ ast.o: ../ast/ast.c
 	$(GCC) -c $^
 
 clean:
-	rm -f frontend *.yy.c y.tab.* ast.o
+	rm -f frontend *.yy.c y.tab.* *.o
 
 

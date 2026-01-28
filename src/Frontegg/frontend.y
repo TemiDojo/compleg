@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include "../ast/ast.h"
+#include "semantic.h"
 #define YYDEBUG 1
 extern int yylex();
 extern FILE *yyin;
@@ -146,9 +147,15 @@ int main(int argc, char *argv[]) {
     
 
     yyparse(); 
-    printNode(root);
+    //printNode(root);
 
     // semantic analysis
+    if (root == NULL) {
+        printf("Error: root is NULL\n");
+        return -1;
+    }
+    semantic_analysis(root);
+    free(root);
     // convert to LLVM IR
     // code optimizer
     // Assembly code generator
