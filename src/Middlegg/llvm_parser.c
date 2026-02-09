@@ -120,6 +120,7 @@ bool isValid(LLVMOpcode opcode) {
 		case LLVMIndirectBr:
 		case LLVMInvoke:
 		case LLVMStore:
+		case LLVMAlloca:
 		case LLVMCall:
 			return false;
 		default:
