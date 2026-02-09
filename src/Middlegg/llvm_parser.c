@@ -84,7 +84,7 @@ bool common_subexpr(LLVMBasicBlockRef bb) {
 				//printf("key exists '%s' in map\n", key.c_str());
 				LLVMReplaceAllUsesWith(instruction, m.at(key));
 				ret = true;
-				puts("subexpr still made");
+				//puts("subexpr still made");
 			} else {
 				//printf("adding string '%s' in map\n", key.c_str());
 				if (LLVMGetInstructionOpcode(instruction) == LLVMStore) {
@@ -107,7 +107,7 @@ bool common_subexpr(LLVMBasicBlockRef bb) {
 
 	}
 	//printMap(&m);
-	printf("ret val is: %d\n", ret);
+	//printf("ret val is: %d\n", ret);
 	return ret;
 
 }
@@ -160,45 +160,71 @@ bool deadcodeElim(LLVMBasicBlockRef bb) {
 		std::string key = LLVMPrintValueToString(instruction);
 		LLVMOpcode opcode = LLVMGetInstructionOpcode(instruction);
 		if (isValid(opcode) && m[key].size() == 0) {
-			printf("removing: %s\n", LLVMPrintValueToString(instruction));
+			//printf("removing: %s\n", LLVMPrintValueToString(instruction));
 			LLVMInstructionEraseFromParent(instruction);
 			ret = true;
-			puts("change still made");
+			//puts("change still made");
 		}
 
 	}
-	printf("ret val2 is: %d\n", ret);
+	//printf("ret val2 is: %d\n", ret);
 	return ret;
 
 }
 
-bool isvalidOperand(LLVMValueRef instruction, int *const) {
-	/*
-	int dummy = *const;
-	for (int i = 0; i < size; i++) {
-		LLVMValueRef val = LLVMGetOperand(instruction, i);
-		if (LLVMIsConstant(val)) {
-			dummy
-			cont
-		}
-
-	}
-	*/
-
-}
 
 bool constantFold(LLVMBasicBlockRef bb) {
-
+	bool ret = false;
+	long long dummyRHS = 0;  
+	long long dummyLHS = 0;
 	for (LLVMValueRef instruction = LLVMGetFirstInstruction(bb); instruction; instruction = LLVMGetNextInstruction(instruction)) {
 		LLVMOpcode Opcode = LLVMGetInstructionOpcode(instruction);
 		switch(Opcode) {
-			case LLVMAdd:
-				//int size = LLVMGetNumOperands(instruction);
+			case LLVMAdd: {
+				LLVMValueRef valLHS = LLVMGetOperand(instruction, 0);
+				LLVMValueRef valRHS = LLVMGetOperand(instruction, 1);
+				if (LLVMIsConstant(valLHS) && LLVMIsConstant(valRHS)) {
+					dummyLHS = LLVMConstIntGetSExtValue(valLHS);
+					dummyRHS = LLVMConstIntGetSExtValue(valRHS);
+					valLHS = LLVMConstInt(LLVMInt32Type(), dummyLHS, 1);
+					valRHS = LLVMConstInt(LLVMInt32Type(), dummyRHS, 1);
+					LLVMValueRef new_ins = LLVMConstAdd(valLHS, valRHS);
+					LLVMReplaceAllUsesWith(instruction, new_ins);
+					ret = true;
+				}
+
 				break;
-			case LLVMSub:
-				break;
-			case LLVMMul:
-				break;
+		      }
+			case LLVMSub:{
+					
+					LLVMValueRef valLHS = LLVMGetOperand(instruction, 0);
+					LLVMValueRef valRHS = LLVMGetOperand(instruction, 1);
+					if (LLVMIsConstant(valLHS) && LLVMIsConstant(valRHS)) {
+						dummyLHS = LLVMConstIntGetSExtValue(valLHS);
+						dummyRHS = LLVMConstIntGetSExtValue(valRHS);
+						valLHS = LLVMConstInt(LLVMInt32Type(), dummyLHS, 1);
+						valRHS = LLVMConstInt(LLVMInt32Type(), dummyRHS, 1);
+						LLVMValueRef new_ins = LLVMConstSub(valLHS, valRHS);
+						LLVMReplaceAllUsesWith(instruction, new_ins);
+						ret = true;
+					}
+					break;
+				     }
+			case LLVMMul:{
+					LLVMValueRef valLHS = LLVMGetOperand(instruction, 0);
+					LLVMValueRef valRHS = LLVMGetOperand(instruction, 1);
+					if (LLVMIsConstant(valLHS) && LLVMIsConstant(valRHS)) {
+						dummyLHS = LLVMConstIntGetSExtValue(valLHS);
+						dummyRHS = LLVMConstIntGetSExtValue(valRHS);
+						valLHS = LLVMConstInt(LLVMInt32Type(), dummyLHS, 1);
+						valRHS = LLVMConstInt(LLVMInt32Type(), dummyRHS, 1);
+						LLVMValueRef new_ins = LLVMConstMul(valLHS, valRHS);
+						LLVMReplaceAllUsesWith(instruction, new_ins);
+						ret = true;
+					}
+					     
+					break;
+				     }
 			default:
 				break;
 
@@ -214,10 +240,10 @@ bool constantFold(LLVMBasicBlockRef bb) {
 void walkBasicblocks(LLVMValueRef function) {
 	bool change = false;
 	for (LLVMBasicBlockRef basicBlock = LLVMGetFirstBasicBlock(function); basicBlock; basicBlock = LLVMGetNextBasicBlock(basicBlock)) {
-		printf("In basic block\n");
 		while(true) {
 			change |= common_subexpr(basicBlock);
 			change |= deadcodeElim(basicBlock);
+			change |= constantFold(basicBlock);
 			if (!change) {
 				break;
 			}
