@@ -47,8 +47,24 @@ void printMap(std::unordered_map<std::string, LLVMValueRef> *m) {
 		it++;
 	}
 }
+void printMap2(std::unordered_map<std::string, std::vector<LLVMValueRef>> *m) {
+	std::unordered_map<std::string, std::vector<LLVMValueRef>> dum = *m;
+	std::unordered_map<std::string, std::vector<LLVMValueRef>>::iterator it = dum.begin();
+	while(it != dum.end()) {
+		printf("PRINTING: %s:  ->", it->first.c_str());		
+		std::vector<LLVMValueRef>::iterator it2 = it->second.begin();
+		printf("[");
+		while(it2 != it->second.end()) {
+			printf("%s, ", LLVMPrintValueToString(*it2));
+			it2++;
+		}
+		puts("]");
+		it++;
+	}
+}
 
-void common_subexpr(LLVMBasicBlockRef bb) {
+bool common_subexpr(LLVMBasicBlockRef bb) {
+	bool ret = false;
 	std::unordered_map<std::string, LLVMValueRef> m; 
 	for (LLVMValueRef instruction = LLVMGetFirstInstruction(bb); instruction; instruction = LLVMGetNextInstruction(instruction)) {
 
@@ -67,6 +83,8 @@ void common_subexpr(LLVMBasicBlockRef bb) {
 			if (m.count(key)) {
 				//printf("key exists '%s' in map\n", key.c_str());
 				LLVMReplaceAllUsesWith(instruction, m.at(key));
+				ret = true;
+				puts("subexpr still made");
 			} else {
 				//printf("adding string '%s' in map\n", key.c_str());
 				if (LLVMGetInstructionOpcode(instruction) == LLVMStore) {
@@ -89,21 +107,122 @@ void common_subexpr(LLVMBasicBlockRef bb) {
 
 	}
 	//printMap(&m);
+	printf("ret val is: %d\n", ret);
+	return ret;
 
 }
 
-void deadcodeElim(LLVMBasicBlockRef bb) {
+bool isValid(LLVMOpcode opcode) {
+	switch(opcode) {
 
-    // first we build the map
-    //
-    std::unordered_map<std::string, std::vector<LLVMValueRef>> m;
+		case LLVMRet:
+		case LLVMBr:
+		case LLVMIndirectBr:
+		case LLVMInvoke:
+		case LLVMStore:
+		case LLVMCall:
+			return false;
+		default:
+			break;
+	}
+
+	return true;
+}
+
+bool deadcodeElim(LLVMBasicBlockRef bb) {
+	bool ret = false;
+	std::unordered_map<std::string, std::vector<LLVMValueRef>> m;
+	for(LLVMValueRef instruction = LLVMGetFirstInstruction(bb); instruction; instruction = LLVMGetNextInstruction(instruction)){
+		std::string key = LLVMPrintValueToString(instruction);
+		LLVMOpcode opcode = LLVMGetInstructionOpcode(instruction);
+		if (!m.count(key)) {
+			std::vector<LLVMValueRef> neighbors;
+			m[key] = neighbors;
+			int op_count = LLVMGetNumOperands(instruction);
+			if (op_count > 0) {
+				for(int i = 0; i < op_count; i++) {
+					LLVMValueRef val = LLVMGetOperand(instruction, i); 
+					std::string token = LLVMPrintValueToString(val);
+
+					if (m.count(token)) {
+						m[token].push_back(instruction);
+					}
+				}
+			}
+
+		}
+
+
+	}
+	//printMap2(&m);
+
+	for (LLVMValueRef instruction = LLVMGetFirstInstruction(bb); instruction; instruction = LLVMGetNextInstruction(instruction)) {
+		std::string key = LLVMPrintValueToString(instruction);
+		LLVMOpcode opcode = LLVMGetInstructionOpcode(instruction);
+		if (isValid(opcode) && m[key].size() == 0) {
+			printf("removing: %s\n", LLVMPrintValueToString(instruction));
+			LLVMInstructionEraseFromParent(instruction);
+			ret = true;
+			puts("change still made");
+		}
+
+	}
+	printf("ret val2 is: %d\n", ret);
+	return ret;
+
+}
+
+bool isvalidOperand(LLVMValueRef instruction, int *const) {
+	/*
+	int dummy = *const;
+	for (int i = 0; i < size; i++) {
+		LLVMValueRef val = LLVMGetOperand(instruction, i);
+		if (LLVMIsConstant(val)) {
+			dummy
+			cont
+		}
+
+	}
+	*/
+
+}
+
+bool constantFold(LLVMBasicBlockRef bb) {
+
+	for (LLVMValueRef instruction = LLVMGetFirstInstruction(bb); instruction; instruction = LLVMGetNextInstruction(instruction)) {
+		LLVMOpcode Opcode = LLVMGetInstructionOpcode(instruction);
+		switch(Opcode) {
+			case LLVMAdd:
+				//int size = LLVMGetNumOperands(instruction);
+				break;
+			case LLVMSub:
+				break;
+			case LLVMMul:
+				break;
+			default:
+				break;
+
+
+		}
+		
+
+	}
+	return false;
 
 }
 
 void walkBasicblocks(LLVMValueRef function) {
+	bool change = false;
 	for (LLVMBasicBlockRef basicBlock = LLVMGetFirstBasicBlock(function); basicBlock; basicBlock = LLVMGetNextBasicBlock(basicBlock)) {
 		printf("In basic block\n");
-		common_subexpr(basicBlock);
+		while(true) {
+			change |= common_subexpr(basicBlock);
+			change |= deadcodeElim(basicBlock);
+			if (!change) {
+				break;
+			}
+			change = false;
+		}
 
 	}
 }
