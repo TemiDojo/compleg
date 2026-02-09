@@ -92,6 +92,14 @@ void common_subexpr(LLVMBasicBlockRef bb) {
 
 }
 
+void deadcodeElim(LLVMBasicBlockRef bb) {
+
+    // first we build the map
+    //
+    std::unordered_map<std::string, std::vector<LLVMValueRef>> m;
+
+}
+
 void walkBasicblocks(LLVMValueRef function) {
 	for (LLVMBasicBlockRef basicBlock = LLVMGetFirstBasicBlock(function); basicBlock; basicBlock = LLVMGetNextBasicBlock(basicBlock)) {
 		printf("In basic block\n");
