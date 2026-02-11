@@ -9,6 +9,7 @@
 #include <vector>
 #include <cstddef>
 #include <string>
+#include <set>
 
 #define prt(x) if(x) { printf("%s\n", x); }
 
@@ -192,12 +193,14 @@ bool constantFold(LLVMBasicBlockRef bb) {
 					LLVMValueRef new_ins = LLVMConstAdd(valLHS, valRHS);
 					LLVMReplaceAllUsesWith(instruction, new_ins);
 					ret = true;
+				} else { 
+					ret = false;
 				}
 
 				break;
 		      }
 			case LLVMSub:{
-					
+				
 					LLVMValueRef valLHS = LLVMGetOperand(instruction, 0);
 					LLVMValueRef valRHS = LLVMGetOperand(instruction, 1);
 					if (LLVMIsConstant(valLHS) && LLVMIsConstant(valRHS)) {
@@ -208,6 +211,8 @@ bool constantFold(LLVMBasicBlockRef bb) {
 						LLVMValueRef new_ins = LLVMConstSub(valLHS, valRHS);
 						LLVMReplaceAllUsesWith(instruction, new_ins);
 						ret = true;
+					} else {
+						ret = false;
 					}
 					break;
 				     }
@@ -222,11 +227,14 @@ bool constantFold(LLVMBasicBlockRef bb) {
 						LLVMValueRef new_ins = LLVMConstMul(valLHS, valRHS);
 						LLVMReplaceAllUsesWith(instruction, new_ins);
 						ret = true;
+					} else {
+						ret = false;
 					}
 					     
 					break;
 				     }
 			default:
+				     ret = false;
 				break;
 
 
@@ -234,24 +242,297 @@ bool constantFold(LLVMBasicBlockRef bb) {
 		
 
 	}
+
+	printf("cfold ret val: %d\n", ret);
+	return ret;
+
+}
+void printGenTable(std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> *m) {
+
+	std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> dum = *m;
+	for (auto i : dum) {
+
+		LLVMDumpValue(LLVMBasicBlockAsValue(i.first));
+		//printf("PRINTING: %s:  ->", LLVMGetBasicBlockName(i.first));		
+		printf("[");
+		for (auto j : i.second) {
+			printf("%s, ", LLVMPrintValueToString(j));
+		}
+		puts("]");
+	}
+}
+
+void gen(LLVMBasicBlockRef bb, std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> *genTable, std::set<LLVMValueRef> *iSet, std::unordered_map<LLVMBasicBlockRef, std::set<LLVMBasicBlockRef>> *predMap, std::set<LLVMValueRef> *gSet) {
+
+	std::set<LLVMValueRef> s;
+	std::set<LLVMBasicBlockRef> ss;
+	std::unordered_map<LLVMValueRef, LLVMValueRef> mcheck;
+	(*genTable)[bb] = s;
+//	if (!(*predMap).count(bb)) {
+//		(*predMap)[bb] = ss;
+//	}
+	for(LLVMValueRef instruction = LLVMGetFirstInstruction(bb); instruction; instruction = LLVMGetNextInstruction(instruction)) {
+		(*gSet).insert(instruction);
+		LLVMOpcode op = LLVMGetInstructionOpcode(instruction);
+		if (op == LLVMStore) {
+			(*iSet).insert(instruction);
+			LLVMValueRef ptr = LLVMGetOperand(instruction, 1);
+			if (mcheck.count(ptr)) {
+				(*genTable)[bb].erase(mcheck[ptr]);
+				(*genTable)[bb].insert(instruction);
+				mcheck[ptr] = instruction;
+			} else {
+				mcheck[ptr] = instruction;
+				(*genTable)[bb].insert(instruction);
+			}
+		}
+		if (LLVMIsATerminatorInst(instruction)) {
+			unsigned int suc_num = LLVMGetNumSuccessors(instruction);
+			for (unsigned int i = 0; i < suc_num; i++) {
+				LLVMBasicBlockRef bnew = LLVMGetSuccessor(instruction, i);
+				if ((*predMap).count(bnew)) {
+					(*predMap)[bnew].insert(bb);
+				} else {
+					std::set<LLVMBasicBlockRef> sss;
+					(*predMap)[bnew] = sss;
+					(*predMap)[bnew].insert(bb);
+				}
+
+			}
+
+		}
+	}
+	//printGenTable(&dummy);
+
+}
+
+void kill(std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> *genTable, std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> *killTable, std::set<LLVMValueRef> *iSet) {
+
+	for (auto i : (*genTable)) {
+		std::set<LLVMValueRef> s;
+		(*killTable)[i.first] = s;
+		for (LLVMValueRef instruction = LLVMGetFirstInstruction(i.first); instruction; instruction = LLVMGetNextInstruction(instruction)) {
+
+			LLVMOpcode opcode = LLVMGetInstructionOpcode(instruction);
+			if (opcode == LLVMStore) {
+				LLVMValueRef op = LLVMGetOperand(instruction, 0);
+				LLVMValueRef op2 = LLVMGetOperand(instruction, 1);
+				for (auto k : (*iSet)) {
+					LLVMValueRef optocmp = LLVMGetOperand(k, 0);
+					LLVMValueRef optocmp2 = LLVMGetOperand(k, 1);
+					if (op == optocmp && op2 == optocmp2) {
+						continue;
+					} else if (optocmp2 == op2) {
+						(*killTable)[i.first].insert(k);
+					}
+				}
+			}
+		}
+	}
+}
+
+bool constantProp(LLVMBasicBlockRef basicBlock, std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> *in) {
+	
+	bool ret = false;
+	puts("CHECING IN*********");
+	printGenTable(&(*in));
+	std::set<LLVMValueRef> R= (*in)[basicBlock];
+	std::set<LLVMValueRef> tbd;
+	for(LLVMValueRef instruction = LLVMGetFirstInstruction(basicBlock); instruction; instruction = LLVMGetNextInstruction(instruction)) {
+		LLVMOpcode opcode = LLVMGetInstructionOpcode(instruction);
+		if (opcode == LLVMStore) {
+			if (!R.count(instruction)) {
+				R.insert(instruction);
+			} else {
+				LLVMValueRef op = LLVMGetOperand(instruction, 1);
+				std::set<LLVMValueRef> nR(R);
+				for (auto i : nR) {
+					LLVMValueRef op2 = LLVMGetOperand(i, 1);
+					if (op == op2) {
+						R.erase(i);
+					}
+				}
+				R.insert(instruction);
+			}
+
+
+		} else if (opcode == LLVMLoad) {
+			LLVMValueRef op = LLVMGetOperand(instruction, 0);
+			std::set<long long> cR;
+			//std::vector<long long> cR;
+			bool flag = true;
+			long long val;
+			for (auto j : R) {
+				LLVMValueRef op2 = LLVMGetOperand(j, 1);	
+				LLVMValueRef op1 = LLVMGetOperand(j, 0);
+				if (op2 == op && LLVMIsAConstant(op1)) {
+					val = LLVMConstIntGetSExtValue(op1);
+					cR.insert(val);
+					printf("VAL: %ld\n", val);
+					/*
+					if (cR.empty()) {
+						cR.push_back(val);
+					} else if (cR[0] != val) {
+						flag = false;
+						cR.clear();
+						break;
+					}
+					*/
+				} else if (op2 == op && !LLVMIsAConstant(op1)) {
+					cR.clear();
+					break;
+				}
+			}
+
+			if (cR.size() == 1) {
+				LLVMValueRef rep = LLVMConstInt(LLVMInt32Type(), val, 1);
+				LLVMReplaceAllUsesWith(instruction, rep);
+				tbd.insert(instruction);
+				ret = true;
+				flag = true;
+
+			}
+		}
+	}
+
+	for (auto k : tbd) {
+		printf("LOAD 2 DELETE: %s\n", LLVMPrintValueToString(k));
+		LLVMInstructionEraseFromParent(k);
+
+	}
+	printf("cprop ret val: %d\n", ret);
+
+	return ret;
+
+
+}
+
+bool cmpB(LLVMValueRef function, std::set<LLVMValueRef> *gSet) {
+	std::set<LLVMValueRef> gCmp;
+	for (LLVMBasicBlockRef basicBlock = LLVMGetFirstBasicBlock(function); basicBlock; basicBlock = LLVMGetNextBasicBlock(basicBlock)) {
+
+		for (LLVMValueRef instruction = LLVMGetFirstInstruction(basicBlock); instruction; instruction = LLVMGetNextInstruction(instruction)){
+			gCmp.insert(instruction);	
+		}
+
+	}
+	if ((*gSet)!=gCmp) {
+		puts("in hre");
+		return true;
+	}
 	return false;
+}
+
+bool globalOpt(LLVMValueRef function) {
+
+	std::unordered_map<LLVMBasicBlockRef, std::set<LLVMBasicBlockRef>> predMap;
+	std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> genTable;
+	std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> killTable;
+	std::set<LLVMValueRef> iSet;
+	std::set<LLVMValueRef> gSet;
+
+	std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> in;
+	std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> out;
+
+	for (LLVMBasicBlockRef basicBlock = LLVMGetFirstBasicBlock(function); basicBlock; basicBlock = LLVMGetNextBasicBlock(basicBlock)) {
+		// gen set
+		gen(basicBlock, &genTable, &iSet, &predMap, &gSet);
+		std::set<LLVMValueRef> s;
+		in[basicBlock] = s;
+	}
+
+	kill(&genTable, &killTable, &iSet);
+	//printGenTable(&genTable);
+	//puts("killTable");
+	//printGenTable(&killTable);
+	// gen map of predecessors
+	for (auto i : genTable) {
+		std::set<LLVMValueRef> newset(i.second);
+		out[i.first] = newset;
+	}
+	bool change = true;
+	while (change) {
+		
+		change = false;
+		/*
+		for (auto i : genTable) {
+			std::set<LLVMValueRef> ns;
+			in[i.first] = ns;
+		}
+		*/
+		for (LLVMBasicBlockRef basicBlock = LLVMGetFirstBasicBlock(function); basicBlock; basicBlock = LLVMGetNextBasicBlock(basicBlock)) {
+			for (auto i : predMap[basicBlock]) {
+				in[basicBlock].insert(out[i].begin(), out[i].end());
+			}
+			std::set<LLVMValueRef> oldout(out[basicBlock]);
+			
+			std::set<LLVMValueRef>ss(in[basicBlock]);
+			std::set<LLVMValueRef>sss(in[basicBlock]);
+			for (auto j : ss) {
+				if (killTable[basicBlock].count(j)) {
+					sss.erase(j);
+				}
+			}
+			out[basicBlock].clear();
+			out[basicBlock].insert(genTable[basicBlock].begin(), genTable[basicBlock].end());
+			out[basicBlock].insert(sss.begin(), sss.end());
+
+			if (oldout != out[basicBlock]) {
+				change = true;
+			}
+		}
+	}
+	bool opt_change = false;
+	for (LLVMBasicBlockRef basicBlock = LLVMGetFirstBasicBlock(function); basicBlock; basicBlock = LLVMGetNextBasicBlock(basicBlock)) {
+		while(true) {
+			opt_change |= constantFold(basicBlock);
+			opt_change |= constantProp(basicBlock, &in);
+			
+
+			// constant fold
+
+			puts("word");
+			if (!opt_change) {
+				break;
+			}
+			opt_change = false;
+		}
+
+	}
+
+
+	return cmpB(function, &gSet);
+
 
 }
 
 void walkBasicblocks(LLVMValueRef function) {
-	bool change = false;
-	for (LLVMBasicBlockRef basicBlock = LLVMGetFirstBasicBlock(function); basicBlock; basicBlock = LLVMGetNextBasicBlock(basicBlock)) {
-		while(true) {
-			change |= common_subexpr(basicBlock);
-			change |= deadcodeElim(basicBlock);
-			change |= constantFold(basicBlock);
-			if (!change) {
-				break;
-			}
-			change = false;
-		}
 
+	bool loc_change = false;
+	bool glob_change = false;
+	while(1) {
+		for (LLVMBasicBlockRef basicBlock = LLVMGetFirstBasicBlock(function); basicBlock; basicBlock = LLVMGetNextBasicBlock(basicBlock)) {
+			while(true) {
+				loc_change |= common_subexpr(basicBlock);
+				loc_change |= deadcodeElim(basicBlock);
+				//loc_change |= constantFold(basicBlock);
+				if (!loc_change) {
+					break;
+				}
+				loc_change = false;
+			}
+
+		}
+		
+		glob_change |= globalOpt(function);
+		puts("checking");
+		
+		if (!glob_change) {
+			break;
+		}
+		glob_change = false;
 	}
+	
 }
 
 void walkFunctions(LLVMModuleRef module) {
