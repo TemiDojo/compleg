@@ -162,10 +162,8 @@ bool deadcodeElim(LLVMBasicBlockRef bb) {
 		std::string key = LLVMPrintValueToString(instruction);
 		LLVMOpcode opcode = LLVMGetInstructionOpcode(instruction);
 		if (isValid(opcode) && m[key].size() == 0) {
-			//printf("removing: %s\n", LLVMPrintValueToString(instruction));
 			LLVMInstructionEraseFromParent(instruction);
 			ret = true;
-			//puts("change still made");
 		}
 
 	}
@@ -243,7 +241,6 @@ bool constantFold(LLVMBasicBlockRef bb) {
 
 	}
 
-	printf("cfold ret val: %d\n", ret);
 	return ret;
 
 }
@@ -268,9 +265,7 @@ void gen(LLVMBasicBlockRef bb, std::unordered_map<LLVMBasicBlockRef, std::set<LL
 	std::set<LLVMBasicBlockRef> ss;
 	std::unordered_map<LLVMValueRef, LLVMValueRef> mcheck;
 	(*genTable)[bb] = s;
-//	if (!(*predMap).count(bb)) {
-//		(*predMap)[bb] = ss;
-//	}
+
 	for(LLVMValueRef instruction = LLVMGetFirstInstruction(bb); instruction; instruction = LLVMGetNextInstruction(instruction)) {
 		(*gSet).insert(instruction);
 		LLVMOpcode op = LLVMGetInstructionOpcode(instruction);
@@ -334,8 +329,7 @@ void kill(std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> *genTabl
 bool constantProp(LLVMBasicBlockRef basicBlock, std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> *in) {
 	
 	bool ret = false;
-	puts("CHECING IN*********");
-	printGenTable(&(*in));
+	//printGenTable(&(*in));
 	std::set<LLVMValueRef> R= (*in)[basicBlock];
 	std::set<LLVMValueRef> tbd;
 	for(LLVMValueRef instruction = LLVMGetFirstInstruction(basicBlock); instruction; instruction = LLVMGetNextInstruction(instruction)) {
@@ -359,7 +353,6 @@ bool constantProp(LLVMBasicBlockRef basicBlock, std::unordered_map<LLVMBasicBloc
 		} else if (opcode == LLVMLoad) {
 			LLVMValueRef op = LLVMGetOperand(instruction, 0);
 			std::set<long long> cR;
-			//std::vector<long long> cR;
 			bool flag = true;
 			long long val;
 			for (auto j : R) {
@@ -368,16 +361,6 @@ bool constantProp(LLVMBasicBlockRef basicBlock, std::unordered_map<LLVMBasicBloc
 				if (op2 == op && LLVMIsAConstant(op1)) {
 					val = LLVMConstIntGetSExtValue(op1);
 					cR.insert(val);
-					printf("VAL: %ld\n", val);
-					/*
-					if (cR.empty()) {
-						cR.push_back(val);
-					} else if (cR[0] != val) {
-						flag = false;
-						cR.clear();
-						break;
-					}
-					*/
 				} else if (op2 == op && !LLVMIsAConstant(op1)) {
 					cR.clear();
 					break;
@@ -396,11 +379,10 @@ bool constantProp(LLVMBasicBlockRef basicBlock, std::unordered_map<LLVMBasicBloc
 	}
 
 	for (auto k : tbd) {
-		printf("LOAD 2 DELETE: %s\n", LLVMPrintValueToString(k));
+		//printf("LOAD 2 DELETE: %s\n", LLVMPrintValueToString(k));
 		LLVMInstructionEraseFromParent(k);
 
 	}
-	printf("cprop ret val: %d\n", ret);
 
 	return ret;
 
@@ -443,7 +425,6 @@ bool globalOpt(LLVMValueRef function) {
 
 	kill(&genTable, &killTable, &iSet);
 	//printGenTable(&genTable);
-	//puts("killTable");
 	//printGenTable(&killTable);
 	// gen map of predecessors
 	for (auto i : genTable) {
@@ -454,12 +435,7 @@ bool globalOpt(LLVMValueRef function) {
 	while (change) {
 		
 		change = false;
-		/*
-		for (auto i : genTable) {
-			std::set<LLVMValueRef> ns;
-			in[i.first] = ns;
-		}
-		*/
+
 		for (LLVMBasicBlockRef basicBlock = LLVMGetFirstBasicBlock(function); basicBlock; basicBlock = LLVMGetNextBasicBlock(basicBlock)) {
 			for (auto i : predMap[basicBlock]) {
 				in[basicBlock].insert(out[i].begin(), out[i].end());
@@ -515,7 +491,7 @@ void walkBasicblocks(LLVMValueRef function) {
 			while(true) {
 				loc_change |= common_subexpr(basicBlock);
 				loc_change |= deadcodeElim(basicBlock);
-				//loc_change |= constantFold(basicBlock);
+				loc_change |= constantFold(basicBlock);
 				if (!loc_change) {
 					break;
 				}
@@ -538,7 +514,7 @@ void walkBasicblocks(LLVMValueRef function) {
 void walkFunctions(LLVMModuleRef module) {
 	for (LLVMValueRef function = LLVMGetFirstFunction(module); function; function = LLVMGetNextFunction(function)) {
 		const char* funcName = LLVMGetValueName(function);
-		printf("Function Name: %s\n", funcName);
+		//printf("Function Name: %s\n", funcName);
 
 		walkBasicblocks(function);
 	}
