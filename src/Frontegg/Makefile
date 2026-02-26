@@ -5,21 +5,27 @@ YACC=yacc
 FLAGS=-o
 .PHONY: all clean
 
-all: frontend
+all: libfrontend.a
 
-frontend: lex.yy.c y.tab.c semantic.c ast.o
-	$(GCC) $^ $(FLAGS) $@ 
+lex.yy.o: lex.yy.c y.tab.h
+	$(GCC) -c lex.yy.c -o lex.yy.o
 
-lex.yy.c: frontend.l
-	$(LEX) $^
+y.tab.o: y.tab.c
+	$(GCC) -c y.tab.c -o y.tab.o
+	
+semantic.o: semantic.c
+	$(GCC) -c semantic.c -o semantic.o
 
-y.tab.c: frontend.y
-	$(YACC) -Wconflicts-sr -Wcounterexamples -d $^
+libfrontend.a: lex.yy.o y.tab.o semantic.o
+	ar rcs libfrontend.a lex.yy.o y.tab.o semantic.o
 
-ast.o: ../ast/ast.c
-	$(GCC) -c $^
+lex.yy.c: frontend.l y.tab.h
+	$(LEX) frontend.l
+
+y.tab.c y.tab.h: frontend.y
+	$(YACC) -Wconflicts-sr -Wcounterexamples -d frontend.y
 
 clean:
-	rm -f frontend *.yy.c y.tab.* *.o
+	rm -f libfrontend.a *.yy.c y.tab.* *.o
 
 

@@ -1,7 +1,5 @@
 
-
 #include "../ast/ast.h"
-
 
 
 int semantic_analysis(astNode *rootPtr);

@@ -4,7 +4,8 @@
 #include "../ast/ast.h"
 #include "semantic.h"
 #include "y.tab.h"
-int yyerror(const char *s);
+#define YY_DECL int yylex(astNode **root)
+int yyerror(astNode **root, const char *s);
 %}
 %%
 "int"       { return TYPE;}
@@ -33,7 +34,7 @@ int yyerror(const char *s);
     }
 
 [ \t\n] ; /* ignore whitespace */
-.   return yyerror("Unknown character");
+.   return yyerror(root, "Unknown character");
 %%
 
 int yywrap(void) {

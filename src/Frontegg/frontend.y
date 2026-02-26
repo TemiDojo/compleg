@@ -5,10 +5,9 @@
 #include "../ast/ast.h"
 #include "semantic.h"
 #define YYDEBUG 1
-extern int yylex();
+extern int yylex(astNode **root);
 extern FILE *yyin;
-int yyerror(const char *);
-astNode *root = NULL;
+int yyerror(astNode **root, const char *);
 %}
 %union {
     int iValue;
@@ -16,6 +15,8 @@ astNode *root = NULL;
     astNode *nPtr;
     vector<astNode*> *stmtList;
 };
+%parse-param { astNode **root }
+%lex-param { astNode **root }
 %token <sIndex> VARIABLE FNAME READ PRINT
 %token <iValue> NUMBER
 %type <nPtr> expression statement functiondef block decl extern program
@@ -30,10 +31,10 @@ astNode *root = NULL;
 %nonassoc UMINUS
 %%
 program: extern extern functiondef                  {
-                                                        root = createProg($1, $2, $3);
+                                                        *root = createProg($1, $2, $3);
                                                     }
         | functiondef                               {
-                                                        root = createProg(NULL, NULL, $1); 
+                                                        *root = createProg(NULL, NULL, $1); 
                                                     }
 extern: EXTERN TYPE READ '(' ')' ';'                {
                                                         $$ = createExtern($3);
@@ -130,33 +131,7 @@ expression: expression '+' expression   { $$ = createBExpr($1, $3, add); }
           ;
         
 %%
-int yyerror(const char *s) {
+int yyerror(astNode **root, const char *s) {
     fprintf(stderr, "%s\n", s);
     return 0;
-}
-int main(int argc, char *argv[]) {
-
-    yydebug = 0;
-    if(argc == 2) {
-        yyin = fopen(argv[1], "r");
-        if (yyin == NULL) {
-            fprintf(stderr, "File open error\n");
-            return 1;
-        }
-    }
-    
-
-    yyparse(); 
-    //printNode(root);
-
-    // semantic analysis
-    if (root == NULL) {
-        printf("Error: root is NULL\n");
-        return -1;
-    }
-    semantic_analysis(root);
-    free(root);
-    // convert to LLVM IR
-    // code optimizer
-    // Assembly code generator
 }
