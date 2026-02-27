@@ -2,6 +2,7 @@
 #include "./ast/ast.h"
 #include "./Frontegg/y.tab.h"
 #include "./Frontegg/semantic.h"
+#include "./Frontegg/builder.h"
 
 extern astNode *root;
 extern FILE *yyin;
@@ -25,10 +26,12 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	printNode(root);
+	//printNode(root);
 
 	// semantic analysis
 	semantic_analysis(root);
+	// IR builder
+	rename_ast(root);	
 
 
 }

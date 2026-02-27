@@ -1,15 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <llvm-c/Core.h>
-#include <llvm-c/IRReader.h>
-#include <llvm-c/Types.h>
-#include <unordered_map>
-#include <vector>
-#include <cstddef>
-#include <string>
-#include <set>
+#include "llvm_parser.h"
 
 #define prt(x) if(x) { printf("%s\n", x); }
 

@@ -16,7 +16,7 @@ all: compiler
 
 # link everything together
 compiler: entry.c $(AST_OBJ) $(FRONT_LIB)
-	$(GCC) entry.c $(AST_OBJ) $(FRONT_LIB) $(INC) -o compiler
+	$(GCC) entry.c $(AST_OBJ) $(FRONT_LIB) $(INC) `llvm-config-17 --cxxflags --ldflags --libs core` -o compiler
 
 # build the parser library
 $(FRONT_LIB):

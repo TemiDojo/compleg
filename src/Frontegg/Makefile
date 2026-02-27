@@ -16,8 +16,11 @@ y.tab.o: y.tab.c
 semantic.o: semantic.c
 	$(GCC) -c semantic.c -o semantic.o
 
-libfrontend.a: lex.yy.o y.tab.o semantic.o
-	ar rcs libfrontend.a lex.yy.o y.tab.o semantic.o
+builder.o: builder.c
+	$(GCC) -g -I /usr/include/llvm-c-17/ `llvm-config-17 --cxxflags` -c builder.c -o builder.o
+
+libfrontend.a: lex.yy.o y.tab.o semantic.o builder.o
+	ar rcs libfrontend.a lex.yy.o y.tab.o semantic.o builder.o
 
 lex.yy.c: frontend.l y.tab.h
 	$(LEX) frontend.l

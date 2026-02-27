@@ -3,7 +3,7 @@ TEST = test_common_subexpr
 
 .PHONY: all clean
 
-all:	$(LLVMCODE) llvm_file
+all:	$(LLVMCODE)
 
 $(LLVMCODE): $(LLVMCODE).c
 	g++ -g -I /usr/include/llvm-c-17/ -c $(LLVMCODE).c
