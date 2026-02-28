@@ -1,6 +1,7 @@
 ### Compiler
 
 ##### Structure
+```txt
 ├── src/
 │   ├── ast/                ; helper files for the astNode
 │   │   ├── ast.c
@@ -30,7 +31,7 @@
 │   ├── entry.c             ; contains the entire flow process of the compiler[frontend -> builder -> middlend ]
 │   └── Makefile
 └── README.md
-
+```
 
 
 ##### Build/Run
