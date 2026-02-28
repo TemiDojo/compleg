@@ -35,4 +35,4 @@
 
 
 ##### Build/Run
-To build, run make in the `src` directory, and the it will automatically compile every part of the project and output an executable `compiler`. Now run the executable with a miniC program `./compiler <mini-c file>` and it will by default output a `test.ll` file.
+To build, run make in the `src` directory, and the it will automatically compile every part of the project and output an executable `compiler`. Now run the executable with a miniC program `./compiler <mini-c file>` and it will by default output a `test.ll` file and dump the outputs before optimization to the console.
