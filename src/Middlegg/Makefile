@@ -1,18 +1,13 @@
-LLVMCODE = llvm_parser
-TEST = test_common_subexpr
+GCC=g++
 
 .PHONY: all clean
 
-all:	$(LLVMCODE)
+all: libmiddle.a	
 
-$(LLVMCODE): $(LLVMCODE).c
-	g++ -g -I /usr/include/llvm-c-17/ -c $(LLVMCODE).c
-	g++ $(LLVMCODE).o `llvm-config-17 --cxxflags --ldflags --libs core` -I /usr/include/llvm-c-17/ -o $@
+libmiddle.a: opt.o
+	ar rcs libmiddle.a opt.o
+opt.o: opt.c
+	$(GCC) -g -I /usr/include/llvm-c-17/ `llvm-config-17 --cxxflags` -c opt.c -o opt.o
 	
-llvm_file: $(TEST).c
-	clang -S -emit-llvm $(TEST).c -o $(TEST).ll
-
 clean:
-	rm -rf $(TEST).ll
-	rm -rf $(LLVMCODE)
-	rm -rf *.o
+	rm -f libmiddle.a *.o

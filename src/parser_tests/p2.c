@@ -12,7 +12,6 @@ int func(int i){
 		int c;
 		while (b < i){
 			b = b + 20;
-			print(b);
 		}
 		a = b + 10;
 	}

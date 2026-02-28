@@ -21,7 +21,7 @@ int yyerror(astNode **root, const char *);
 %token <iValue> NUMBER
 %type <nPtr> expression statement functiondef block decl extern program
 %type <stmtList> statement_list decl_list
-%token TYPE EXTERN IF ELSE WHILE RETURN 
+%token TYPE EXTERN IF ELSE WHILE RETURN VOID
 %nonassoc IFX
 %nonassoc ELSE
 
@@ -39,7 +39,7 @@ program: extern extern functiondef                  {
 extern: EXTERN TYPE READ '(' ')' ';'                {
                                                         $$ = createExtern($3);
                                                     }
-    | EXTERN TYPE PRINT '(' TYPE ')' ';'           {
+    | EXTERN VOID PRINT '(' TYPE ')' ';'           {
                                                         $$ = createExtern($3);
                                                     }
     ;
@@ -81,6 +81,7 @@ decl: TYPE VARIABLE ';'                              {
 statement: VARIABLE '=' expression ';'              {    
                                                         $$ = createAsgn(createVar($1), $3);
                                                     }
+          | PRINT '('expression')'';'  { $$ = createCall($1, $3); }
 
          | expression ';'                           {   
                                                         $$ = $1; 
@@ -123,10 +124,9 @@ expression: expression '+' expression   { $$ = createBExpr($1, $3, add); }
           | expression NE expression    { $$ = createRExpr($1, $3, neq);}
           | expression EQ expression    { $$ = createRExpr($1, $3, eq);}
           | '(' expression ')'          { $$ = $2; }
-          | '-' NUMBER %prec UMINUS     { $$ = createCnst(-$2); }
+          | '-' expression %prec UMINUS     { $$ = createUExpr($2, uminus); }
           | NUMBER              {$$ = createCnst($1);}
-          | VARIABLE '(' ')'            { $$ = createCall($1, NULL); }
-          | VARIABLE '('expression ')'  { $$ = createCall($1, $3); }
+          | READ '(' ')'            { $$ = createCall($1, NULL); }
           | VARIABLE                    { $$ = createVar($1); }
           ;
         

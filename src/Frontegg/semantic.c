@@ -12,8 +12,6 @@ int semantic_analysis(astNode *rootPtr) {
     // declarations can only be found in functions and in statments
     traverseRoot(rootPtr, NULL);
 
-    printf("SUCCESS : semantic analysis\n");
-
     return 0;
 
 

@@ -1,4 +1,4 @@
-#include "llvm_parser.h"
+#include "opt.h"
 
 #define prt(x) if(x) { printf("%s\n", x); }
 
@@ -642,7 +642,7 @@ bool livevarAnalysis(LLVMValueRef function) {
 				}
 			}
 		}
-		printGenTable(&out);
+		//printGenTable(&out);
 
 		bool opt_change = false;
 		for (LLVMBasicBlockRef basicBlock = LLVMGetFirstBasicBlock(function); basicBlock; basicBlock = LLVMGetNextBasicBlock(basicBlock)) {
@@ -693,27 +693,24 @@ void walkFunctions(LLVMModuleRef module) {
 }
 
 
-int main(int argc, char** argv) {
+int beginOpt(const char* filename) {
 
 	LLVMModuleRef m;
+    char * fn = strdup(filename);
+    m = createLLVMModel(fn);
 
-	if (argc == 2) {
-		m = createLLVMModel(argv[1]);
-	}
-	else {
-		m = NULL;
-		return 1;
-	}
+	char *res = LLVMPrintModuleToString(m);
+	printf("%s\n", res);
+	LLVMDisposeMessage(res);
 	if (m != NULL) {
 		walkFunctions(m);
 
 	} else {
 		fprintf(stderr, "m is NULL\n");
 	}
-	//LLVMPrintModuleToFile(m, argv[1], NULL);
-	char *res = LLVMPrintModuleToString(m);
-	printf("%s\n", res);
-	LLVMDisposeMessage(res);
+
+	LLVMPrintModuleToFile(m, filename, NULL);
+    free(fn);
 
 	return 0;
 }

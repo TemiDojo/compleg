@@ -3,6 +3,7 @@
 #include "./Frontegg/y.tab.h"
 #include "./Frontegg/semantic.h"
 #include "./Frontegg/builder.h"
+#include "./Middlegg/opt.h"
 
 extern astNode *root;
 extern FILE *yyin;
@@ -26,12 +27,20 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	//printNode(root);
+	//printNode(root);  
 
 	// semantic analysis
+    puts("Semantic Analysis");
 	semantic_analysis(root);
+    puts("Done");
 	// IR builder
-	rename_ast(root);	
+    const char * outputfile = "test.ll";
+    puts("IR Builder");
+	rename_ast(root, outputfile);	
+    puts("Done");
+    puts("Optimizations");
+    beginOpt(outputfile);
+    puts("Done");
 
 
 }

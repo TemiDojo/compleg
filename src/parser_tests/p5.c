@@ -8,7 +8,8 @@ int func(int i){
 	b = 0;
 	while (b < i){
 		int a;
-		a = read();
+        a = 0;
+        print(a);
 		b = 10 + a;
 	}
 	return(b);

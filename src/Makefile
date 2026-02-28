@@ -15,18 +15,23 @@ INC = -I$(FRONT_DIR) -I$(AST_DIR)
 all: compiler
 
 # link everything together
-compiler: entry.c $(AST_OBJ) $(FRONT_LIB)
-	$(GCC) entry.c $(AST_OBJ) $(FRONT_LIB) $(INC) `llvm-config-17 --cxxflags --ldflags --libs core` -o compiler
+compiler: entry.c $(AST_OBJ) $(FRONT_LIB) $(MID_LIB)
+	$(GCC) entry.c $(AST_OBJ) $(FRONT_LIB) $(MID_LIB) $(INC) `llvm-config-17 --cxxflags --ldflags --libs core` -o compiler
 
 # build the parser library
 $(FRONT_LIB):
 	$(MAKE) -C $(FRONT_DIR)
+
+# build the optimizatio nlibrary
+$(MID_LIB):
+	$(MAKE) -C $(MID_DIR)
 
 # build the AST object file
 $(AST_OBJ):
 	$(MAKE) -C $(AST_DIR)
 
 clean:
-	rm -f compiler
+	rm -f compiler *.ll
 	$(MAKE) -C $(FRONT_DIR) clean
 	$(MAKE) -C $(AST_DIR) clean
+	$(MAKE) -C $(MID_DIR) clean
