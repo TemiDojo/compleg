@@ -25,7 +25,7 @@ int yyerror(astNode **root, const char *s);
         yylval.iValue = atoi(yytext);
         return NUMBER;
     }
-[a-zA-Z]*   {
+[a-zA-Z][a-zA-Z0-9]*   {
         yylval.sIndex = strdup(yytext);
         return VARIABLE;
     }

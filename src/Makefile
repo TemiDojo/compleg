@@ -37,7 +37,7 @@ $(AST_OBJ):
 	$(MAKE) -C $(AST_DIR)
 
 clean:
-	rm -f compiler *.ll
+	rm -f compiler *.ll *.out *.o
 	$(MAKE) -C $(FRONT_DIR) clean
 	$(MAKE) -C $(AST_DIR) clean
 	$(MAKE) -C $(MID_DIR) clean

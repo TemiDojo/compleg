@@ -7,6 +7,8 @@
 #include <set>
 #include <map>
 #include <algorithm>
+#include <cstdio>
+#include <string>
 
 void reg_alloc(LLVMValueRef func);
 void compute_liveness(LLVMBasicBlockRef b);
@@ -14,6 +16,10 @@ void get_inst_index(LLVMBasicBlockRef b);
 void freeRegs(LLVMValueRef i, std::set<int> &available_regs);
 LLVMValueRef find_spill(LLVMValueRef i);
 
-void createBBLabels();
-void printDirectives();
+std::string getRegName(int regIdx);
+void createBBLabels(LLVMValueRef func);
+void printDirectives(FILE* out, const char* funcName);
+void printFunctionEnd(FILE* out);
 void getOffsetMap(LLVMValueRef func);
+void codegen(LLVMModuleRef *Mod, const char* filename);
+void generateAssembly(LLVMModuleRef Mod, FILE *out);

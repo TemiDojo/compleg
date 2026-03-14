@@ -30,4 +30,4 @@ bool storeElim(LLVMBasicBlockRef basicBlock, std::unordered_map<LLVMBasicBlockRe
 bool livevarAnalysis(LLVMValueRef function);
 void walkBasicblocks(LLVMValueRef function);
 void walkFunctions(LLVMModuleRef module);
-int beginOpt(const char* filename);
+int beginOpt(LLVMModuleRef *Mod, const char* filename);

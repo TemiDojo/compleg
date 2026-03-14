@@ -111,7 +111,7 @@ bool isValid(LLVMOpcode opcode) {
 		case LLVMInvoke:
 		case LLVMStore:
 		case LLVMAlloca:
-		case LLVMCall:
+        case LLVMCall:
 			return false;
 		default:
 			break;
@@ -491,18 +491,11 @@ void gen2(LLVMBasicBlockRef bb, std::unordered_map<LLVMBasicBlockRef, std::set<L
 		LLVMOpcode op = LLVMGetInstructionOpcode(instruction);
 		if (op == LLVMStore) {
 			LLVMValueRef operand = LLVMGetOperand(instruction, 1);
-			if (sCheck.count(operand)) {
-				continue;
-			} else {
-				sCheck.insert(operand);
-			}
+            sCheck.insert(operand);
 		} else if (op == LLVMLoad) {
 			(*iSet).insert(instruction);
 			LLVMValueRef operand = LLVMGetOperand(instruction, 0);
-			if (sCheck.count(operand)) {
-			// don't add to gen set
-				continue;
-		    } else {
+			if (!sCheck.count(operand)) {
 				(*genTable)[bb].insert(instruction);
 		    }
 		} else if (LLVMIsATerminatorInst(instruction)) {
@@ -528,17 +521,14 @@ void kill2(std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> *genTab
 				LLVMOpcode opcode = LLVMGetInstructionOpcode(instruction);
 				if (opcode == LLVMStore) {
 					LLVMValueRef storeOpt1 = LLVMGetOperand(instruction, 1);
-					const char *tes = LLVMPrintValueToString(storeOpt1);
 					for (auto k : (*iSet)) {
 						LLVMValueRef loadOpt0 = LLVMGetOperand(k, 0);
-						const char *tes2 = LLVMPrintValueToString(loadOpt0);
-						if (strcmp(tes, tes2)== 0) {
+						if (storeOpt1 == loadOpt0) {
 							(*killTable)[i.first].insert(k);
 						}
 					}
 				}
 			}
-
 	}
 
 }
@@ -547,30 +537,28 @@ bool storeElim(LLVMBasicBlockRef basicBlock, std::unordered_map<LLVMBasicBlockRe
 
 	bool ret = false;
 	//printGenTable(&(*in));
-	std::set<LLVMValueRef> R= (*out)[basicBlock];
 	std::set<LLVMValueRef> tbd;
-	for(LLVMValueRef instruction = LLVMGetFirstInstruction(basicBlock); instruction; instruction = LLVMGetNextInstruction(instruction)) {
+
+    std::set<LLVMValueRef> R;
+    for(auto i : (*out)[basicBlock]) {
+        R.insert(LLVMGetOperand(i, 0));
+    }
+
+	for(LLVMValueRef instruction = LLVMGetLastInstruction(basicBlock); instruction; instruction = LLVMGetPreviousInstruction(instruction)) {
 		LLVMOpcode opcode = LLVMGetInstructionOpcode(instruction);
-		bool flag = false;
 
-		if (opcode == LLVMStore) {
-			LLVMValueRef op = LLVMGetOperand(instruction, 1);
-			const char *tes = LLVMPrintValueToString(op);
-
-			for (auto i : R) {
-				LLVMValueRef loadOp = LLVMGetOperand(i, 0);
-				const char *tes1 = LLVMPrintValueToString(loadOp);
-				if (strcmp(tes1, tes) == 0) {
-					//puts("store has ref load ptr");
-					flag = true;
-					break;
-				}
-			}
-			if (!flag) {
-				//puts("Store has no referencded lod ptr");
-				ret = true;
-				tbd.insert(instruction);
-			}
+        if (opcode == LLVMLoad) {
+            LLVMValueRef loadAddr = LLVMGetOperand(instruction, 0);
+            R.insert(loadAddr);
+        }
+        else if (opcode == LLVMStore) {
+			LLVMValueRef storeAddr = LLVMGetOperand(instruction, 1);
+            if (R.count(storeAddr)) {
+                R.erase(storeAddr);
+            } else {
+                tbd.insert(instruction);
+                ret = true;
+            }
 		}
 	}
 
@@ -648,7 +636,6 @@ bool livevarAnalysis(LLVMValueRef function) {
 		for (LLVMBasicBlockRef basicBlock = LLVMGetFirstBasicBlock(function); basicBlock; basicBlock = LLVMGetNextBasicBlock(basicBlock)) {
 			bool block_change = false;
 			block_change |= storeElim(basicBlock, &out);
-			opt_change |= block_change;	
 		}
 
 		if (!opt_change) {
@@ -693,23 +680,23 @@ void walkFunctions(LLVMModuleRef module) {
 }
 
 
-int beginOpt(const char* filename) {
+int beginOpt(LLVMModuleRef *Mod, const char* filename) {
 
-	LLVMModuleRef m;
+	LLVMModuleRef m = *Mod;
     char * fn = strdup(filename);
-    m = createLLVMModel(fn);
+    //m = createLLVMModel(fn);
 
-	char *res = LLVMPrintModuleToString(m);
-	printf("%s\n", res);
-	LLVMDisposeMessage(res);
-	if (m != NULL) {
-		walkFunctions(m);
-
+    if (m != NULL) {
+        char *res = LLVMPrintModuleToString(m);
+        printf("%s\n", res);
+        LLVMDisposeMessage(res);
+        walkFunctions(m);
+        LLVMPrintModuleToFile(m, filename, NULL);
 	} else {
 		fprintf(stderr, "m is NULL\n");
 	}
 
-	LLVMPrintModuleToFile(m, filename, NULL);
+
     free(fn);
 
 	return 0;
