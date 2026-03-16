@@ -28,7 +28,11 @@
 │   │   ├── p3.c
 │   │   ├── p4.c
 │   │   └── p5.c
-│   ├── entry.c             ; contains the entire flow process of the compiler[frontend -> builder -> middlend ]
+│   ├── Backegg/       ; contains the liveness and asm code gen logic
+│   │   ├── gen_asm.c
+│   │   ├── gen_asm.h
+│   │   └── Makefile 
+│   ├── entry.c             ; contains the entire flow process of the compiler[frontend -> builder -> middlend -> backend ]
 │   └── Makefile
 └── README.md
 ```
